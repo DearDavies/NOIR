@@ -84,7 +84,7 @@ class LanguageTest {
     fun `ascii mode removes box glyphs from guidance`() {
         ASCII = true
         try {
-            val about = Guidance.about("0.4.2")
+            val about = Guidance.about("0.4.3")
             val error = Guidance.error("x")
             val guide = Guidance.deviceGuide(Lang.EN)
             assertFalse(about.contains("╭"))
@@ -103,7 +103,7 @@ class LanguageTest {
             Guidance.unauthorizedGuide(Lang.EN),
             Guidance.adbMissing(Lang.EN),
             Guidance.jadxMissing(Lang.EN),
-            Guidance.about("0.4.2")
+            Guidance.about("0.4.3")
         )
         blocks.forEach { block ->
             assertFalse(han.containsMatchIn(block), "untranslated guidance:\n$block")
