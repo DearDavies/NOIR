@@ -194,4 +194,27 @@ class ReportTest {
         assertTrue(md.contains("| score | package |"))
         assertTrue(md.contains("`com.example`"))
     }
+
+    @Test
+    fun `csv quotes commas quotes and newlines`() {
+        val entry = AppEntry(
+            pkg = "com.example",
+            uid = "1",
+            isSystem = false,
+            debuggable = false,
+            installer = null,
+            permissions = listOf("INTERNET", "READ_SMS"),
+            endpoints = listOf("https://a.example/x,y"),
+            score = 35,
+            category = Category.TELEMETRY,
+            vendor = "A, \"B\"\nC"
+        )
+        val meta = ReportMeta(android = "16", sdk = "36", generatedAt = "2026-11-12T00:00:00Z")
+        val csv = Report.csv(Device("s", "device", "Pixel"), listOf(entry), meta, Lang.EN)
+
+        assertTrue(csv.startsWith("\"device_model\",\"device_serial\""))
+        assertTrue(csv.contains("\"A, \"\"B\"\"\nC\""))
+        assertTrue(csv.contains("\"https://a.example/x,y\""))
+        assertTrue(csv.contains("\"com.example\""))
+    }
 }

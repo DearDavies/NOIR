@@ -347,6 +347,7 @@ noir-out/
 ├── report.json               # 结构化结果（应用、权限、端点、建议）
 ├── report.md                 # 人类可读报告
 ├── report.html               # 离线单文件报告，可直接用浏览器打开
+├── report.csv                # 表格导出（每行一个应用，适合 Excel）
 ├── domains-trackers.txt      # 统计/广告/崩溃上报，可整份导入
 ├── domains-other.txt         # 用途不明，导入前逐条判断
 ├── domains-functional.txt    # 推送/登录/更新/支付/商店/云同步，禁止拦截

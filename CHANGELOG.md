@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **CSV report** — `noir scan` now writes `report.csv` alongside the JSON,
+  Markdown, and HTML reports, one row per flagged app with the same evidence.
+
 ## [0.4.3] — 2026-11-12
 
 **Docker support and Android 16 / OEM dumpsys compatibility.**

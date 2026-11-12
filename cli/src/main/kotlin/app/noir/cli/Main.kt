@@ -929,6 +929,9 @@ private fun writeReports(result: ScanResult, recommendations: List<Recommendatio
     File(result.outDir, "report.html").writeText(
         Report.html(result.device, result.apps, recommendations, result.meta, LANG)
     )
+    File(result.outDir, "report.csv").writeText(
+        Report.csv(result.device, result.apps, result.meta, LANG)
+    )
     writeDomainFiles(result.outDir, result.apps)
     val effective = effectiveActions(result.adb, result, recommendations)
     File(result.outDir, "plan.txt").writeText(

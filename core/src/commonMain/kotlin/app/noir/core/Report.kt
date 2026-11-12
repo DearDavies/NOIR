@@ -161,6 +161,43 @@ object Report {
         return sb.toString()
     }
 
+    /**
+     * One row per flagged app, with the same evidence as the JSON report.
+     * Quoted CRLF rows keep the file usable in Excel and other spreadsheet tools.
+     */
+    fun csv(
+        device: Device,
+        apps: List<AppEntry>,
+        meta: ReportMeta = ReportMeta(),
+        lang: Lang = Lang.ZH
+    ): String {
+        val sb = StringBuilder()
+        val header = listOf(
+            "device_model", "device_serial", "android", "sdk", "generated_at",
+            "package", "uid", "system", "debuggable", "score",
+            "category", "category_key", "vendor", "installer", "shared_uid",
+            "data_types", "data_type_keys", "permissions",
+            "upload_hosts", "command_hosts", "endpoints"
+        )
+        sb.append(header.joinToString(",") { csvField(it) }).append("\r\n")
+        apps.forEach { a ->
+            val row = listOf(
+                device.model, device.serial, meta.android, meta.sdk, meta.generatedAt,
+                a.pkg, a.uid, a.isSystem.toString(), a.debuggable.toString(), a.score.toString(),
+                a.category.localized(lang), a.category.name, a.vendor ?: "", a.installer ?: "",
+                a.sharedUid ?: "",
+                a.dataTypes.joinToString("; ") { it.localized(lang) },
+                a.dataTypes.joinToString("; ") { it.name },
+                a.permissions.joinToString("; "),
+                a.uploadEndpoints.joinToString("; "),
+                a.commandEndpoints.joinToString("; "),
+                a.endpoints.joinToString("; ")
+            )
+            sb.append(row.joinToString(",") { csvField(it) }).append("\r\n")
+        }
+        return sb.toString()
+    }
+
     /** A self-contained, offline HTML report. No external assets or scripts. */
     fun html(
         device: Device,
@@ -445,6 +482,9 @@ footer{border-top:1px solid var(--line);margin-top:24px;padding-top:18px;color:v
 
     private fun md(value: String): String =
         value.replace("|", "\\|").replace("\r", " ").replace("\n", " ")
+
+    private fun csvField(value: String): String =
+        "\"" + value.replace("\"", "\"\"") + "\""
 
     private fun array(items: List<String>): String =
         items.joinToString(prefix = "[", postfix = "]") { "\"${esc(it)}\"" }
