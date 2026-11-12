@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **dumpsys compatibility** — package parsing now tolerates OEM indentation
+  and section order (`Shared users:` before `Packages:`), and a scan that sees
+  packages but parses none fails loudly instead of producing a clean report.
+
 ## [0.4.2] — 2026-11-07
 
 **Security and safety release. All users of 0.4.1 or earlier should update.**
