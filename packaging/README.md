@@ -9,8 +9,7 @@ the Gradle build.
 GitHub release. It follows the standard Scoop manifest layout and includes
 `checkver` / `autoupdate` for future releases.
 
-To publish it, add the manifest to a Scoop bucket (for example
-`Verlintas/scoop-bucket`) and install it with:
+It is published in the [Verlintas Scoop bucket](https://github.com/Verlintas/scoop-bucket):
 
 ```powershell
 scoop bucket add verlintas https://github.com/Verlintas/scoop-bucket

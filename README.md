@@ -236,6 +236,19 @@ macOS / Windows 的 Docker Desktop 不能把 USB 设备透传进容器，这两�
 不要改成让容器去连宿主机的 adb server：它默认只监听 `127.0.0.1:5037`，容器通常连不上；
 而用 `adb -a` 让它监听所有网卡，会把一个没有认证的端口暴露给整个局域网，任何人都能借它控制手机。
 
+**方式四：Scoop（Windows）**
+
+```powershell
+scoop bucket add verlintas https://github.com/Verlintas/scoop-bucket
+scoop install noir
+```
+
+`noir` 会从官方 GitHub Release 安装，升级用 `scoop update noir`。adb 和 jadx 仍需单独安装：
+
+```powershell
+scoop install adb jadx
+```
+
 ## 构建
 
 ```bash

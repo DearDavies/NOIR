@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **CSV report** — `noir scan` now writes `report.csv` alongside the JSON,
   Markdown, and HTML reports, one row per flagged app with the same evidence.
+- **Scoop** — Windows users can install and update NOIR from the Verlintas
+  Scoop bucket; WinGet manifests are prepared for submission.
 
 ## [0.4.3] — 2026-11-12
 
