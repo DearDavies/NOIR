@@ -12,6 +12,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Scoop** — Windows users can install and update NOIR from the Verlintas
   Scoop bucket; WinGet manifests are prepared for submission.
 
+### Changed
+
+- **scan performance** — the device-side scanner lists the `classes*.dex`
+  entries that actually exist instead of probing `classes.dex` through
+  `classes99.dex` one by one, removing up to 98 `unzip` calls per split APK.
+  A 502-package cold scan dropped from roughly 3s to 1s per APK; the endpoint
+  sets were identical to the previous scanner.
+
 ## [0.4.3] — 2026-11-12
 
 **Docker support and Android 16 / OEM dumpsys compatibility.**

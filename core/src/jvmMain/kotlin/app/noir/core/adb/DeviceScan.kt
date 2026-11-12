@@ -72,29 +72,40 @@ object DeviceScan {
         val failed = HashSet<String>()
         val pendingFallback = ArrayList<String>()
 
+        // Keep remote paths unique: two scans on the same device must not
+        // overwrite each other's script, target list, or dex scratch file.
+        val remoteId = "noir-${System.nanoTime()}"
+        val remoteScript = "/data/local/tmp/$remoteId.sh"
+        val remoteList = "/data/local/tmp/$remoteId.txt"
+        val remoteTmp = "/data/local/tmp/$remoteId.bin"
+        fun cleanRemote() {
+            runCatching {
+                adb.shell(serial, "rm -f $remoteScript $remoteList $remoteTmp", timeoutSec = 15)
+            }
+        }
+
         val list = File(workDir, "targets.txt")
         list.writeText(targets.joinToString("\n", postfix = "\n") { "${it.pkg} ${it.path}" })
 
-        // Android builds can ship more than classes15.dex. Keep the explicit
-        // list because several vendor unzip builds do not expand globs.
-        val dexEntries = (1..99).joinToString(" ") {
-            if (it == 1) "classes.dex" else "classes$it.dex"
-        }
-
+        // Ask unzip for the dex entries that actually exist instead of probing
+        // classes.dex..classes99.dex one by one. On a 500-app device that cuts
+        // hundreds of thousands of unzip invocations. Listing first also avoids
+        // relying on vendor unzip builds to expand globs.
         val script = File(workDir, "scan.sh")
         script.writeText(
             """
             #!/system/bin/sh
-            TMP=/data/local/tmp/noir_dex.bin
+            TMP=${remoteTmp}
             while read p f; do
               : > ${'$'}TMP
               # pm path returns every split APK, not just the base.
               APKS=${'$'}(pm path "${'$'}p" 2>/dev/null | sed 's/^package://')
               [ -z "${'$'}APKS" ] && APKS="${'$'}f"
               for apk in ${'$'}APKS; do
-                for d in $dexEntries; do
-                  unzip -p "${'$'}apk" "${'$'}d" 2>/dev/null >> ${'$'}TMP
-                done
+                DEXES=${'$'}(unzip -l "${'$'}apk" 2>/dev/null \
+                  | sed -n 's/.* \(classes[0-9]*\.dex\)[[:space:]]*${'$'}/\1/p')
+                [ -z "${'$'}DEXES" ] && DEXES=classes.dex
+                unzip -p "${'$'}apk" ${'$'}DEXES 2>/dev/null >> ${'$'}TMP
               done
               if [ ! -s ${'$'}TMP ]; then
                 echo "F ${'$'}p"
@@ -105,15 +116,16 @@ object DeviceScan {
               fi
               rm -f ${'$'}TMP
               echo "P ${'$'}p"
-            done < /data/local/tmp/noir_targets.txt
+            done < ${remoteList}
             echo "#DONE"
             """.trimIndent()
         )
 
-        val pushedScript = adb.push(serial, script, "/data/local/tmp/noir_scan.sh")
-        val pushedList = adb.push(serial, list, "/data/local/tmp/noir_targets.txt")
+        val pushedScript = adb.push(serial, script, remoteScript)
+        val pushedList = adb.push(serial, list, remoteList)
         if (!pushedScript.ok || !pushedList.ok) {
             println("  ! could not push the device-side scanner; pulling APKs instead")
+            cleanRemote()
             return urlsByPulling(adb, serial, targets, workDir, onProgress)
         }
 
@@ -121,7 +133,7 @@ object DeviceScan {
         val total = targets.size
 
         val execution = adb.execStreaming(
-            listOf("-s", serial, "shell", "sh /data/local/tmp/noir_scan.sh"),
+            listOf("-s", serial, "shell", "sh $remoteScript"),
             timeoutSec = 1_800
         ) { line ->
             when {
@@ -148,6 +160,7 @@ object DeviceScan {
             // The script never ran. Fall back to pulling everything rather than
             // returning a plausible-looking empty report.
             println("  ! device-side scan produced no progress; pulling ${targets.size} APKs instead")
+            cleanRemote()
             return urlsByPulling(adb, serial, targets, workDir, onProgress)
         }
 
@@ -183,6 +196,7 @@ object DeviceScan {
             }
         }
 
+        cleanRemote()
         return UrlScan(result, failed)
     }
 
