@@ -1,0 +1,102 @@
+name: Scan compatibility / zero packages
+description: Scan works but reports parsed 0, or packages are missing on a specific ROM.
+title: "[scan] parsed 0 on "
+labels: [ "bug" ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when `noir scan` finds packages but parses none, or when a
+        specific OEM ROM produces incomplete results.
+
+        NOIR 0.4.3 and later stop with an explicit error instead of writing a
+        clean report when parsing fails. Please include the format sample below
+        so the parser can be fixed without guessing.
+
+        **Redact** IMEI, serial numbers, phone numbers, accounts, and other
+        personal identifiers. Do **not** collapse whitespace: indentation is the
+        part that matters.
+
+  - type: input
+    id: version
+    attributes:
+      label: NOIR version
+      description: Output of `noir --version`
+      placeholder: NOIR 0.4.3
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device, ROM, and Android version
+      placeholder: OnePlus PLR110, ColorOS 16, Android 16 (SDK 36)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Host operating system
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Windows 10
+        - Windows 11
+        - Debian / Ubuntu
+        - other Linux
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: "`noir doctor` output"
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: scan
+    attributes:
+      label: Scan output
+      description: Include the lines from `packages:` through the parse error.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: dump-head
+    attributes:
+      label: "`dumpsys package` header"
+      description: |
+        Run this on the host and paste the output. Keep the original indentation.
+        Redact identifiers, not whitespace.
+        ```bash
+        adb shell dumpsys package | head -80
+        ```
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: dump-package
+    attributes:
+      label: One package block
+      description: |
+        Paste one representative block, including the `Package [...]` line and
+        the following permission lines. Replace the package name if you prefer.
+        ```bash
+        adb shell dumpsys package | grep -n -A 30 'Package \['
+        ```
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Does `adb shell dumpsys package <package>` work while the full dump does not?
+    validations:
+      required: false
