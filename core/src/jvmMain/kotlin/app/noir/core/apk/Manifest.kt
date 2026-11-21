@@ -25,7 +25,10 @@ data class ManifestFacts(
     val cleartext: Boolean?,
     val debuggable: Boolean?,
     val targetSdk: String?,
-    val networkSecurityConfig: Boolean
+    val networkSecurityConfig: Boolean,
+    val packageName: String? = null,
+    val versionName: String? = null,
+    val permissions: Set<String> = emptySet()
 ) {
     val exportedWithoutPermission: List<ComponentFact>
         get() = components.filter { it.exported && it.enabled && it.permission == null }
@@ -48,8 +51,14 @@ object ManifestAnalyzer {
         val nodes = Axml.parse(bytes)
         if (nodes.isEmpty()) return null
 
+        val manifest = nodes.firstOrNull { it.name == "manifest" }
         val application = nodes.firstOrNull { it.depth == 1 && it.name == "application" }
         val sdk = nodes.firstOrNull { it.name == "uses-sdk" }
+        val permissions = nodes
+            .filter { it.name == "uses-permission" || it.name == "uses-permission-sdk-23" }
+            .mapNotNull { node -> node.attrs["name"]?.takeIf { it.isNotBlank() } }
+            .map { it.removePrefix("android.permission.") }
+            .toSet()
         val appPermission = application?.attrs?.get("permission")?.takeIf { it.isNotBlank() }
         val targetSdk = sdk?.attrs?.get("targetSdkVersion")?.toIntOrNull()
 
@@ -95,7 +104,10 @@ object ManifestAnalyzer {
                     ?: targetSdk?.let { it < 28 },
                 debuggable = application?.attrs?.get("debuggable")?.parseBool(),
                 targetSdk = sdk?.attrs?.get("targetSdkVersion"),
-                networkSecurityConfig = application?.attrs?.get("networkSecurityConfig")?.isNotBlank() == true
+                networkSecurityConfig = application?.attrs?.get("networkSecurityConfig")?.isNotBlank() == true,
+                packageName = manifest?.attrs?.get("package")?.takeIf { it.isNotBlank() },
+                versionName = manifest?.attrs?.get("versionName")?.takeIf { it.isNotBlank() },
+                permissions = permissions
             )
         } catch (e: Exception) {
             null

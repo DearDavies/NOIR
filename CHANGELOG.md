@@ -30,6 +30,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   from an existing report. With no package it explains the top 10, `--all`
   covers every flagged app, and multiple packages can be passed explicitly.
   Batch mode is compact by default; `--full` and `--json` are available.
+- **offline APK audit** — `noir apk <file|dir>` reads manifests and dex files
+  without a device, merges split APKs by package, and writes the same
+  JSON/Markdown/HTML/CSV reports plus domain lists.
 
 ### Changed
 

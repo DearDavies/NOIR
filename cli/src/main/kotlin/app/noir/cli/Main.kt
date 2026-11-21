@@ -171,6 +171,7 @@ private fun runMain(args: Array<String>) {
     when (command) {
         "devices" -> cmdDevices(commandArgs)
         "scan" -> cmdScan(commandArgs)
+        "apk" -> cmdApk(commandArgs)
         "report" -> cmdReport(commandArgs)
         "explain" -> cmdExplain(commandArgs)
         "diff" -> cmdDiff(commandArgs)
@@ -219,6 +220,7 @@ private fun usage() {
           noir setup                          download missing tools into ~/.noir/tools
           noir devices [--json]               list connected devices
           noir scan [options]                 inventory apps, permissions and endpoints
+          noir apk <file|dir> [options]       audit APK files without a device
           noir report <dir|report.json>       re-render MD / HTML / CSV from a report
           noir explain [package...]           explain one or more apps from a report
           noir diff <old> <new> [options]     compare two report.json files
@@ -443,6 +445,82 @@ private fun cmdScan(raw: List<String>) {
     }
     println()
     println(Tui.clip("[+] ${result.outDir.absolutePath}", ascii = ASCII))
+}
+
+private fun cmdApk(raw: List<String>) {
+    val args = Args(raw)
+    val inputArg = args.positional.singleOrNull()
+    if (inputArg == null) {
+        throw NoirException(
+            t("用法：noir apk <APK 文件|目录> [--out <目录>]", "usage: noir apk <apk file|dir> [--out <dir>]"),
+            t("不连接手机，直接审计 APK 的清单权限和 dex 端点。", "Audit manifest permissions and dex endpoints without a device.")
+        )
+    }
+    val input = File(inputArg)
+    if (!input.exists()) {
+        throw NoirException(t("找不到：${input.path}", "not found: ${input.path}"))
+    }
+    val files = if (input.isDirectory) {
+        input.walkTopDown()
+            .filter { it.isFile && it.extension.equals("apk", ignoreCase = true) }
+            .sortedBy { it.path }
+            .toList()
+    } else {
+        listOf(input)
+    }
+    if (files.isEmpty()) {
+        throw NoirException(
+            t("目录里没有 APK。", "no APK files in that directory."),
+            t("传入单个 APK，或包含 .apk 的目录。", "Pass one APK or a directory containing .apk files.")
+        )
+    }
+
+    val ignore = args.value("ignore")?.let(::loadIgnore) ?: IgnoreRules.EMPTY
+    val minScore = intOption(args, "min", 0, 0)
+    val limit = intOption(args, "limit", 500, 0)
+    val audit = auditApks(files, ignore, minScore, limit)
+    if (audit.files == 0) {
+        throw NoirException(
+            t("没有解析出 AndroidManifest.xml。", "could not parse AndroidManifest.xml from these files."),
+            t("确认文件是有效 APK，而不是 split/config 资源包。", "Make sure these are valid APKs, not split/config resource packages.")
+        )
+    }
+
+    val outDir = File(args.value("out") ?: "noir-apk").apply { mkdirs() }
+    val meta = ReportMeta(
+        tool = "NOIR $VERSION",
+        host = Platform.describe(),
+        android = "APK",
+        sdk = audit.targetSdk ?: "",
+        build = "offline",
+        fingerprint = "apk:${input.name}",
+        user = "0",
+        generatedAt = OffsetDateTime.now().toString(),
+        minScore = minScore,
+        limit = limit
+    )
+    val device = Device("apk", "offline", input.name, "apk")
+    val recommendations = Advisor.advise(audit.apps, LANG)
+    writeReportFiles(outDir, device, audit.apps, recommendations, meta, ignore)
+
+    println()
+    println("%5s  %-12s %-10s %-44s %s".format("SCORE", "CATEGORY", "VENDOR", "PACKAGE", "PERM/UPLOAD/CMD"))
+    audit.apps.take(40).forEach { a ->
+        println(
+            "%5d  %s %-10s %-44s %d/%d/%d".format(
+                a.score, Tui.padRight(a.category.localized(LANG), 12), a.vendor ?: "—", a.pkg,
+                a.permissions.size, a.uploadEndpoints.size, a.commandEndpoints.size
+            )
+        )
+    }
+    println()
+    println(
+        t(
+            "[*] ${audit.files} 个 APK，${audit.apps.size} 个应用，跳过 ${audit.skipped} 个文件",
+            "[*] ${audit.files} APK(s), ${audit.apps.size} app(s), skipped ${audit.skipped} file(s)"
+        )
+    )
+    println(Tui.clip("[+] ${outDir.absolutePath}", ascii = ASCII))
 }
 
 private fun cmdExplain(raw: List<String>) {
@@ -1177,23 +1255,34 @@ private fun readReportMeta(adb: Adb, device: Device, android: String): ReportMet
     )
 }
 
-private fun writeReports(result: ScanResult, recommendations: List<Recommendation>) {
-    File(result.outDir, "report.json").writeText(
-        Report.json(result.device, result.apps, recommendations, result.meta, LANG)
+private fun writeReportFiles(
+    outDir: File,
+    device: Device,
+    apps: List<AppEntry>,
+    recommendations: List<Recommendation>,
+    meta: ReportMeta,
+    ignore: IgnoreRules
+) {
+    File(outDir, "report.json").writeText(
+        Report.json(device, apps, recommendations, meta, LANG)
     )
-    File(result.outDir, "report.md").writeText(
-        Report.markdown(result.device, result.apps, recommendations, result.meta, LANG)
+    File(outDir, "report.md").writeText(
+        Report.markdown(device, apps, recommendations, meta, LANG)
     )
-    File(result.outDir, "report.html").writeText(
-        Report.html(result.device, result.apps, recommendations, result.meta, LANG)
+    File(outDir, "report.html").writeText(
+        Report.html(device, apps, recommendations, meta, LANG)
     )
-    File(result.outDir, "report.csv").writeText(
-        Report.csv(result.device, result.apps, result.meta, LANG)
+    File(outDir, "report.csv").writeText(
+        Report.csv(device, apps, meta, LANG)
     )
-    if (!result.ignore.isEmpty) {
-        File(result.outDir, "ignore.txt").writeText(result.ignore.render())
+    if (!ignore.isEmpty) {
+        File(outDir, "ignore.txt").writeText(ignore.render())
     }
-    writeDomainFiles(result.outDir, result.apps)
+    writeDomainFiles(outDir, apps)
+}
+
+private fun writeReports(result: ScanResult, recommendations: List<Recommendation>) {
+    writeReportFiles(result.outDir, result.device, result.apps, recommendations, result.meta, result.ignore)
     val effective = effectiveActions(result.adb, result, recommendations)
     File(result.outDir, "plan.txt").writeText(
         effective.joinToString("\n") { it.setCommand(result.meta.user) } + if (effective.isEmpty()) "" else "\n"

@@ -297,6 +297,7 @@ noir --about              # 它是什么、会写什么、许可
 noir --version
 noir devices              # 列出设备；加 --json 输出机器可读结果
 noir scan                 # 全量扫描，输出 JSON / Markdown / HTML / CSV / 域名清单
+noir apk app.apk          # 不连手机，直接审计 APK 文件
 noir report noir-out      # 从已有 report.json 重新生成 MD / HTML / CSV
 noir explain com.example.app  # 从报告解释某个应用为什么被标记
 noir diff old/report.json new/report.json   # 对比两次扫描
@@ -324,6 +325,24 @@ noir block com.example.app --apply
 | `--format <md,html,csv>` | `report` 命令的输出格式 |
 | `--adb <path>` / `--jadx <path>` | 手动指定工具路径 |
 | `--yes` | 自动化场景下跳过确认 |
+
+### 离线 APK 审计
+
+没有手机，或者想在安装前先看一个 APK：
+
+```bash
+noir apk app.apk --out apk-report
+noir apk ./downloads --out apk-report
+noir apk ./downloads --out apk-report --ignore noir.ignore
+```
+
+- 读取 `AndroidManifest.xml` 的包名、版本、权限、exported 组件、debuggable、targetSdk
+- 直接从 `classes*.dex` 提取端点，不运行应用
+- split APK 按包名合并
+- 生成同样的 `report.json` / `.md` / `.html` / `.csv` 和域名清单
+- 不执行任何 appops 或卸载；只做静态审计
+
+离线模式没有设备的 `uid`、系统应用标记和运行时权限状态，结果会比真机扫描保守。
 
 ### 忽略已知项
 
