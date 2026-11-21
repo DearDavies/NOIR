@@ -54,4 +54,11 @@ class ExplainTest {
         assertTrue(json.contains("\"actionKey\": \"REVIEW\""))
         assertTrue(json.contains("api.example.com"))
     }
+
+    @Test
+    fun `batch json is an array`() {
+        val json = explainJsonBatch(listOf(app to listOf(recommendation)), Lang.EN)
+        assertTrue(json.trimStart().startsWith("["))
+        assertTrue(json.contains("com.example.app"))
+    }
 }

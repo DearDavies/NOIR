@@ -10,6 +10,8 @@ import app.noir.core.Lang
 import app.noir.core.Recommendation
 import app.noir.core.localized
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
+import com.google.gson.JsonParser
 
 /** "Why is this app flagged?" rendered from an existing report. */
 internal fun explainReport(app: AppEntry, recommendations: List<Recommendation>, lang: Lang): String = buildString {
@@ -57,6 +59,25 @@ internal fun explainReport(app: AppEntry, recommendations: List<Recommendation>,
     }
 }
 
+/** Compact form used when explaining several apps at once. */
+internal fun explainBrief(app: AppEntry, recommendations: List<Recommendation>, lang: Lang): String = buildString {
+    appendLine("NOIR explain · ${app.pkg}")
+    appendLine("  score      ${app.score} · ${app.category.localized(lang)}${app.vendor?.let { " · $it" } ?: ""}")
+    appendLine(
+        "  can read   " +
+            if (app.dataTypes.isEmpty()) "—" else app.dataTypes.sortedBy { it.ordinal }.joinToString(", ") { it.localized(lang) }
+    )
+    if (app.leaks.isNotEmpty()) {
+        appendLine("  uploads")
+        app.leaks.entries.sortedBy { it.key.ordinal }.forEach { (data, hosts) ->
+            appendLine("    ${data.localized(lang)} → ${hosts.joinToString(", ")}")
+        }
+    }
+    recommendations.forEach { r ->
+        appendLine("  action     ${r.risk} · ${r.action.localized(lang)} · ${r.reason}")
+    }
+}
+
 /** Machine-readable form of [explainReport]. */
 internal fun explainJson(app: AppEntry, recommendations: List<Recommendation>, lang: Lang): String {
     val data = linkedMapOf<String, Any?>(
@@ -95,4 +116,15 @@ internal fun explainJson(app: AppEntry, recommendations: List<Recommendation>, l
         }
     )
     return GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(data)
+}
+
+internal fun explainJsonBatch(
+    items: List<Pair<AppEntry, List<Recommendation>>>,
+    lang: Lang
+): String {
+    val array = JsonArray()
+    items.forEach { (app, recommendations) ->
+        array.add(JsonParser.parseString(explainJson(app, recommendations, lang)))
+    }
+    return GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(array)
 }

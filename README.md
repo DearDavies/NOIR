@@ -362,12 +362,15 @@ noir report old/report.json --out shared-report --format html
 ### 解释单个应用
 
 ```bash
-noir explain com.example.app
-noir explain com.example.app --report noir-out
-noir explain com.example.app --report noir-out --json
+noir explain                       # 默认前 10 个被标记应用
+noir explain --top 20              # 前 20 个
+noir explain --all                 # 全部被标记应用
+noir explain com.a com.b           # 指定多个包
+noir explain com.example.app --json
 ```
 
-会从已有 `report.json` 展示这个应用的分数、类别、厂商、可读数据、上报路径、权限、端点和建议动作。适合扫描后追问“它为什么被标红”。
+会从已有 `report.json` 展示应用的分数、类别、厂商、可读数据、上报路径、权限、端点和建议动作。
+单个应用显示完整证据；批量模式默认显示精简摘要，加 `--full` 可展开完整内容。适合扫描后追问“它们为什么被标红”。
 
 ## 对比两次扫描
 

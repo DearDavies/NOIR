@@ -26,9 +26,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   devices, and an overall `ok` flag for automation and bug reports.
 - **user-only scan** — `--user-only` skips system apps while keeping the full
   permission/endpoint pipeline for user-installed apps.
-- **explain** — `noir explain <package>` answers "why is this app flagged?"
-  from an existing report: data types, upload paths, permissions, endpoints,
-  and recommendations; `--json` is available for tooling.
+- **explain** — `noir explain [package...]` answers "why is this app flagged?"
+  from an existing report. With no package it explains the top 10, `--all`
+  covers every flagged app, and multiple packages can be passed explicitly.
+  Batch mode is compact by default; `--full` and `--json` are available.
 
 ### Changed
 
