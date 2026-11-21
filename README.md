@@ -298,6 +298,7 @@ noir --version
 noir devices              # 列出设备；加 --json 输出机器可读结果
 noir scan                 # 全量扫描，输出 JSON / Markdown / HTML / CSV / 域名清单
 noir report noir-out      # 从已有 report.json 重新生成 MD / HTML / CSV
+noir explain com.example.app  # 从报告解释某个应用为什么被标记
 noir diff old/report.json new/report.json   # 对比两次扫描
 noir ui                   # 扫描并渲染仪表盘
 noir auto                 # 扫描 + 分类 + 生成处置计划（dry-run）
@@ -357,6 +358,16 @@ noir report old/report.json --out shared-report --format html
 ```
 
 默认重写输入目录里的 `report.md` / `report.html` / `report.csv`。适合升级 NOIR 后重新渲染，或把 JSON 分享给别人后再生成 HTML。
+
+### 解释单个应用
+
+```bash
+noir explain com.example.app
+noir explain com.example.app --report noir-out
+noir explain com.example.app --report noir-out --json
+```
+
+会从已有 `report.json` 展示这个应用的分数、类别、厂商、可读数据、上报路径、权限、端点和建议动作。适合扫描后追问“它为什么被标红”。
 
 ## 对比两次扫描
 
