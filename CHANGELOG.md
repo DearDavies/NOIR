@@ -22,6 +22,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Markdown, HTML, and CSV from an existing report without a device.
 - **JSON device list** — `noir devices --json` emits a machine-readable array
   for scripts and CI.
+- **doctor JSON** — `noir doctor --json` reports platform, Docker, adb, jadx,
+  devices, and an overall `ok` flag for automation and bug reports.
+- **user-only scan** — `--user-only` skips system apps while keeping the full
+  permission/endpoint pipeline for user-installed apps.
 
 ### Changed
 

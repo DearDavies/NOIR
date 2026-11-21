@@ -89,7 +89,11 @@ NOIR doctor
 ```bash
 noir setup          # 缺什么下什么
 noir setup --yes    # 不询问，适合脚本
+noir doctor --json  # 机器可读的环境 / 工具 / 设备状态
 ```
+
+`doctor --json` 会输出 `platform`、`java`、`container`、`docker`、`adb`、
+`jadx`、`devices` 和 `ok`，适合 CI 和 bug report；没有可用设备时退出码仍为 1。
 
 ### Docker 安装 / 运行检测
 
@@ -315,6 +319,7 @@ noir block com.example.app --apply
 | `--limit <n>` | 最多输出 N 条 |
 | `--only <regex>` | 只扫描匹配的包名，例如 `--only 'com\.miui\.'` |
 | `--ignore <file>` | 忽略文件中的包名和上报域名 |
+| `--user-only` | 只保留用户安装的应用，跳过系统应用 |
 | `--format <md,html,csv>` | `report` 命令的输出格式 |
 | `--adb <path>` / `--jadx <path>` | 手动指定工具路径 |
 | `--yes` | 自动化场景下跳过确认 |

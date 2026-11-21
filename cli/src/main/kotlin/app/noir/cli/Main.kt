@@ -46,7 +46,7 @@ private val VERSION: String =
 
 private val BOOLEAN_FLAGS = setOf(
     "apply", "yes", "verbose", "help", "about", "version", "ascii", "color", "no-color",
-    "quiet", "no-clear", "all", "purge", "json", "fail-on-regression"
+    "quiet", "no-clear", "all", "purge", "json", "fail-on-regression", "user-only"
 )
 
 private val VALUE_FLAGS = setOf(
@@ -233,9 +233,13 @@ private fun usage() {
           --limit <n>        cap reported apps (default 500)
           --only <regex>     restrict scanning to matching package names
           --ignore <file>    ignore packages/hosts listed in a file
+          --user-only        skip system apps
           --format <list>    report formats: md,html,csv (default: all)
           --adb <path>       override adb binary
           --jadx <path>      override jadx binary
+
+        doctor:
+          --json                  emit machine-readable diagnostics
 
         diff:
           --json                  emit a machine-readable diff
@@ -821,6 +825,10 @@ private fun cmdSetup(raw: List<String>) {
 
 private fun cmdDoctor(raw: List<String>) {
     val args = Args(raw)
+    if (args.flag("json")) {
+        doctorJson(args)
+        return
+    }
     println("NOIR doctor")
     println("  platform  ${Platform.describe()}")
     println("  java      ${System.getProperty("java.version")}")
@@ -870,6 +878,55 @@ private fun cmdDoctor(raw: List<String>) {
     } else {
         println("  jadx      $jadx")
     }
+}
+
+/** Machine-readable doctor output for CI, bug reports, and support tooling. */
+private fun doctorJson(args: Args) {
+    val adbPath = Platform.findAdb(args.value("adb"))
+    val adb = adbPath?.let(::Adb)
+    val adbVersion = adb?.exec(listOf("version"), timeoutSec = 15)?.output
+        ?.lineSequence()
+        ?.firstOrNull { it.startsWith("Version") }
+    val devices = adb?.devices().orEmpty()
+    val jadx = Platform.findJadx(args.value("jadx"))
+    val docker = Docker.probe()
+    val ok = adbPath != null && adbVersion != null && devices.any { it.state == "device" }
+
+    val data = linkedMapOf<String, Any?>(
+        "tool" to "NOIR $VERSION",
+        "platform" to Platform.describe(),
+        "java" to System.getProperty("java.version"),
+        "container" to CONTAINER?.label,
+        "docker" to if (docker.installed || CONTAINER == null) {
+            mapOf(
+                "installed" to docker.installed,
+                "cli" to docker.cli,
+                "clientVersion" to docker.clientVersion,
+                "daemon" to docker.daemon.name.lowercase(),
+                "serverVersion" to docker.serverVersion,
+                "detail" to docker.detail
+            )
+        } else {
+            null
+        },
+        "adb" to mapOf(
+            "path" to adbPath,
+            "version" to adbVersion,
+            "ok" to (adbPath != null && adbVersion != null)
+        ),
+        "jadx" to jadx?.let { mapOf("path" to it) },
+        "devices" to devices.map {
+            mapOf(
+                "serial" to it.serial,
+                "state" to it.state,
+                "model" to it.model,
+                "product" to it.product
+            )
+        },
+        "ok" to ok
+    )
+    println(GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(data))
+    if (!ok) exitProcess(1)
 }
 
 private fun confirm(prompt: String): Boolean {
@@ -940,6 +997,7 @@ private fun performScan(args: Args, limitOverride: Int? = null): ScanResult {
         m.perms.contains("INTERNET") &&
             m.perms.count { it in Rules.SENSITIVE } > 0 &&
             paths.containsKey(pkg) &&
+            (!args.flag("user-only") || !m.isSystem) &&
             !ignore.ignoresPackage(pkg) &&
             (only == null || only.containsMatchIn(pkg))
     }
