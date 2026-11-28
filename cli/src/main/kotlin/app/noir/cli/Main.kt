@@ -1134,6 +1134,18 @@ private fun performScan(args: Args, limitOverride: Int? = null): ScanResult {
 
     val meta = Dumpsys.parse(dump.output)
     say("[*] parsed: ${meta.size}")
+    if (paths.isEmpty() && meta.isNotEmpty()) {
+        throw NoirException(
+            t(
+                "无法读取应用安装路径（dumpsys 解析到 ${meta.size} 个包，但 pm 没有返回路径）。",
+                "could not read package paths (dumpsys parsed ${meta.size} packages, but pm returned no paths)."
+            ),
+            t(
+                "请把 `adb shell pm list packages -f` 的前 20 行，以及 `adb shell pm path <包名>` 的脱敏输出反馈到项目 issue。",
+                "Please report the first 20 lines of `adb shell pm list packages -f` and a redacted `adb shell pm path <package>` sample in a project issue."
+            )
+        )
+    }
     if (paths.isNotEmpty() && meta.isEmpty()) {
         throw NoirException(
             t(
@@ -1205,7 +1217,7 @@ private fun performScan(args: Args, limitOverride: Int? = null): ScanResult {
         if (fresh.failed.isNotEmpty()) {
             say("[!] ${fresh.failed.size} APK(s) could not be analysed; they will be retried next scan")
         }
-    } else {
+    } else if (targets.isNotEmpty()) {
         say("[*] all endpoints served from cache")
     }
 

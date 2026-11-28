@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.6] — 2026-11-29
+
+**Honor / Android 14 package path compatibility.**
+
+### Fixed
+
+- **OEM package paths** — when `pm list packages -f` returns no paths (seen on Honor / Android 14), fall back to `cmd package list packages -f`, then `pm list packages` plus `pm path <pkg>`, and fail clearly if paths still cannot be read. This fixes `packages: 0` scans even when `dumpsys package` parsed hundreds of packages.
+
 ## [0.4.5] — 2026-11-22
 
 **Offline APK audit, explain, doctor JSON, and user-only scans.**

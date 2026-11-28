@@ -33,17 +33,46 @@ object DeviceScan {
     private const val RESULT = "R "
     private const val PROGRESS = "P "
 
+    private val SAFE_PACKAGE = Regex("^[A-Za-z0-9_.]+$")
+
     fun packagePaths(adb: Adb, serial: String): Map<String, String> {
-        val out = adb.shell(serial, "pm list packages -f").output
-        val map = HashMap<String, String>()
-        out.lineSequence().forEach { line ->
+        // `pm list packages -f` is the fast path. Some OEM builds return no
+        // paths or reject -f entirely; fall back to names + `pm path <pkg>`.
+        val combined = LinkedHashMap<String, String>()
+        listOf("pm list packages -f", "cmd package list packages -f").forEach { command ->
+            if (combined.isNotEmpty()) return@forEach
+            combined.putAll(parsePackagePaths(adb.shell(serial, command, timeoutSec = 120).output))
+        }
+        if (combined.isNotEmpty()) return combined
+
+        val names = adb.shell(serial, "pm list packages", timeoutSec = 120).output
+            .lineSequence()
+            .map { it.trim().removePrefix("package:").trim() }
+            .filter { SAFE_PACKAGE.matches(it) }
+            .distinct()
+        names.forEach { pkg ->
+            val path = adb.shell(serial, "pm path $pkg", timeoutSec = 30).output
+                .lineSequence()
+                .map { it.trim() }
+                .firstOrNull { it.startsWith("package:") }
+                ?.removePrefix("package:")
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+            if (path != null) combined[pkg] = path
+        }
+        return combined
+    }
+
+    internal fun parsePackagePaths(output: String): Map<String, String> {
+        val map = LinkedHashMap<String, String>()
+        output.lineSequence().forEach { line ->
             if (!line.startsWith("package:")) return@forEach
             val body = line.removePrefix("package:")
             val idx = body.lastIndexOf('=')
             if (idx <= 0) return@forEach
-            val path = body.substring(0, idx)
+            val path = body.substring(0, idx).trim()
             val pkg = body.substring(idx + 1).trim()
-            if (pkg.isNotEmpty()) map[pkg] = path
+            if (pkg.isNotEmpty() && path.isNotEmpty()) map[pkg] = path
         }
         return map
     }
