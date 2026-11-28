@@ -16,7 +16,7 @@ scoop bucket add verlintas https://github.com/Verlintas/scoop-bucket
 scoop install noir
 ```
 
-The manifest currently points at `v0.4.5`; update `version`, `url`, and `hash`
+The manifest currently points at `v0.4.6`; update `version`, `url`, and `hash`
 when publishing a new release.
 
 ## WinGet (Windows)
@@ -33,7 +33,7 @@ Verlintas.NOIR.locale.en-US.yaml
 Validate them on Windows with:
 
 ```powershell
-winget validate --manifest packaging\winget\0.4.5
+winget validate --manifest packaging\winget\0.4.6
 ```
 
 Then submit them to `microsoft/winget-pkgs` (normally with `wingetcreate` or a
